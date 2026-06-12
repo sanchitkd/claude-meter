@@ -45,7 +45,7 @@ Nothing leaves your Mac except the request to `claude.ai` itself.
 
 ### Option A — download the app (recommended)
 
-1. Get the latest build from **[sanchitkd.com/claude-meter](https://www.sanchitkd.com/claude-meter)** — or [download directly](https://github.com/sanchitkd/claude-meter/releases/latest/download/ClaudeMeter.app.zip) / browse [all releases](https://github.com/sanchitkd/claude-meter/releases).
+1. Get the latest build from **[claude.sanchitkd.com](https://claude.sanchitkd.com/)** — or [download directly](https://github.com/sanchitkd/claude-meter/releases/latest/download/ClaudeMeter.app.zip) / browse [all releases](https://github.com/sanchitkd/claude-meter/releases).
 2. Unzip and move **`ClaudeMeter.app`** to `/Applications`.
 3. **First launch:** the app is unsigned, so macOS Gatekeeper will warn you. **Right-click the app -> Open -> Open**, or go to **System Settings -> Privacy & Security -> "Open Anyway."** You only do this once.
 
