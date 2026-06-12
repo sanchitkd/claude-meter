@@ -4,9 +4,7 @@ A native macOS menu-bar app that shows your **Claude usage** as a Dynamic Island
 
 > Built for people who live in **Claude Code** / **claude.ai** and want to stop hitting rate-limit walls by surprise.
 
-<!-- Add a screenshot/GIF here once you have one:
-![Claude Meter](docs/screenshot.png)
--->
+![Claude Meter](docs/claude-meter-demo.gif)
 
 ## What it does
 

@@ -12,6 +12,7 @@ public final class ClaudeIslandAppDelegate: NSObject, NSApplicationDelegate {
     private var appearanceController: AppearanceController?
     private var webSession: ClaudeWebSession?
     private var loginController: ClaudeLoginWindowController?
+    private var updateChecker: UpdateChecker?
 
     public func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -57,6 +58,9 @@ public final class ClaudeIslandAppDelegate: NSObject, NSApplicationDelegate {
 
         panelController.show()
         logger.info("Claude Meter launched.")
+        let updateChecker = UpdateChecker(logger: logger)
+        self.updateChecker = updateChecker
+        updateChecker.checkInBackground()
 
         let loginController = ClaudeLoginWindowController()
         self.loginController = loginController
