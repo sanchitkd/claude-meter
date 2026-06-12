@@ -27,4 +27,7 @@ cat > "$PLIST" <<'PLIST'
 </plist>
 PLIST
 chmod +x "$MACOS_DIR/ClaudeMeter"
+APP_PATH=".build/release/ClaudeMeter.app"
+xattr -cr "$APP_PATH"
+codesign --force --sign - "$APP_PATH"      # ad-hoc sign whole bundle ($APP_PATH = your .build/release/ClaudeMeter.app)
 echo "Built $APP_DIR"
