@@ -17,6 +17,7 @@ cat > "$PLIST" <<'PLIST'
     <key>CFBundleIdentifier</key><string>com.sanchitkd.ClaudeMeter</string>
     <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
     <key>CFBundleName</key><string>Claude Meter</string>
+    <key>CFBundleIconFile</key><string>AppIcon</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>CFBundleShortVersionString</key><string>1.0.0</string>
     <key>CFBundleVersion</key><string>1</string>
@@ -28,6 +29,8 @@ cat > "$PLIST" <<'PLIST'
 PLIST
 chmod +x "$MACOS_DIR/ClaudeMeter"
 APP_PATH=".build/release/ClaudeMeter.app"
+mkdir -p "$APP_PATH/Contents/Resources"
+cp assets/AppIcon.icns "$APP_PATH/Contents/Resources/AppIcon.icns"
 xattr -cr "$APP_PATH"
 codesign --force --sign - "$APP_PATH"      # ad-hoc sign whole bundle ($APP_PATH = your .build/release/ClaudeMeter.app)
 echo "Built $APP_DIR"
