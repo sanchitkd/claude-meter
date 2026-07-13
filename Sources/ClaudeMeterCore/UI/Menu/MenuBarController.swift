@@ -47,6 +47,7 @@ public final class MenuBarController: NSObject {
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "Open Logs", action: #selector(openLogs), keyEquivalent: "l"))
         menu.addItem(NSMenuItem(title: "Preferences", action: #selector(openPreferences), keyEquivalent: ","))
+        menu.addItem(NSMenuItem(title: "Send Feedback…", action: #selector(sendFeedback), keyEquivalent: ""))
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "Quit", action: #selector(quit), keyEquivalent: "q"))
 
@@ -79,6 +80,11 @@ public final class MenuBarController: NSObject {
 
     @objc private func openPreferences() {
         actions.openPreferences()
+    }
+
+    /// Always one click away — the permanent half of the feedback ask.
+    @objc private func sendFeedback() {
+        NSWorkspace.shared.open(AppLinks.feedback)
     }
 
     @objc private func quit() {

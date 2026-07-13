@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 public struct IslandView: View {
@@ -141,10 +142,21 @@ private struct CollapsedIslandView: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            half(label: "S", value: snapshot.session?.usagePercentage, leading: true)
-                .accessibilityLabel("Current session usage")
-            half(label: "W", value: snapshot.weekly?.usagePercentage, leading: false)
-                .accessibilityLabel("Weekly usage")
+            half(
+                label: "S",
+                marker: nil,
+                value: snapshot.session?.usagePercentage,
+                leading: true
+            )
+            .accessibilityLabel("Current session usage")
+
+            half(
+                label: "W",
+                marker: snapshot.weeklyMarker,
+                value: snapshot.weekly?.usagePercentage,
+                leading: false
+            )
+            .accessibilityLabel(weeklyAccessibilityLabel)
         }
         .frame(width: 128, height: 26)
         .clipShape(Capsule(style: .continuous))
@@ -155,14 +167,35 @@ private struct CollapsedIslandView: View {
         }
     }
 
-    private func half(label: String, value: Double?, leading: Bool) -> some View {
+    private var weeklyAccessibilityLabel: String {
+        if let driver = snapshot.weeklyDriver {
+            return "Weekly usage, currently capped by \(driver)"
+        }
+        return "Weekly usage, all models"
+    }
+
+    /// `marker` appears only when a model cap — not the all-models cap — is the one that
+    /// will stop you. "W·F 100%" says *why* the pill is red without opening the card.
+    private func half(label: String, marker: String?, value: Double?, leading: Bool) -> some View {
         let fill = UsageColorResolver.color(for: value, palette: palette)
         let txt = UsageColorResolver.textColor(for: value, palette: palette)
         let valueText = value.map { "\(Int($0.rounded()))%" } ?? "—"
         return HStack(spacing: 3) {
-            Text(label).font(.system(size: 9, weight: .heavy, design: .rounded)).opacity(0.75)
-            Text(valueText).font(.system(size: 11, weight: .semibold, design: .rounded))
+            HStack(spacing: 0) {
+                Text(label)
+                    .font(.system(size: 9, weight: .heavy, design: .rounded))
+                    .opacity(0.75)
+                if let marker {
+                    Text("·\(marker)")
+                        .font(.system(size: 8, weight: .heavy, design: .rounded))
+                        .opacity(0.95)
+                }
+            }
+            Text(valueText)
+                .font(.system(size: 11, weight: .semibold, design: .rounded))
         }
+        .lineLimit(1)
+        .minimumScaleFactor(0.72)
         .foregroundStyle(txt)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(.leading, leading ? 4 : 0)
@@ -179,6 +212,12 @@ private struct ExpandedIslandView: View {
     let weeklyCountdown: String
     let onSettings: () -> Void
 
+    /// Only worth showing chips when there's more than one weekly cap in play.
+    private var weeklyRows: [UsageLimit] {
+        let rows = snapshot.weeklyLimits
+        return rows.count > 1 ? rows : []
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             header
@@ -193,14 +232,28 @@ private struct ExpandedIslandView: View {
                 }
                 VStack(alignment: .leading, spacing: 8) {
                     MetricRow(
-                        title: "Weekly Used",
+                        title: weeklyTitle,
                         value: UsageFormatters.percentageString(snapshot.weekly?.usagePercentage)
                     )
                     MetricRow(title: "Weekly Reset", value: weeklyCountdown)
                 }
             }
 
-            MetricRow(title: "Last Refresh", value: UsageFormatters.timestampString(snapshot.capturedAt))
+            HStack(alignment: .center, spacing: 12) {
+                MetricRow(title: "Last Refresh", value: UsageFormatters.timestampString(snapshot.capturedAt))
+
+                if !weeklyRows.isEmpty {
+                    Spacer(minLength: 0)
+                    HStack(spacing: 6) {
+                        ForEach(weeklyRows) { limit in
+                            LimitChip(
+                                limit: limit,
+                                isBinding: limit.displayName == snapshot.weekly?.limitDescription
+                            )
+                        }
+                    }
+                }
+            }
 
             footer
         }
@@ -208,6 +261,14 @@ private struct ExpandedIslandView: View {
         .padding(.vertical, 13)
         .frame(width: 520, height: 148, alignment: .topLeading)
         .foregroundStyle(.white)
+    }
+
+    /// "Weekly Used" normally; "Weekly · Fable" when a model cap is the binding one.
+    private var weeklyTitle: String {
+        if let driver = snapshot.weeklyDriver {
+            return "Weekly · \(driver)"
+        }
+        return "Weekly Used"
     }
 
     private var header: some View {
@@ -243,7 +304,7 @@ private struct ExpandedIslandView: View {
 
             Spacer(minLength: 8)
 
-            Link(destination: URL(string: "https://www.sanchitkd.com/?ref=claude-meter#contact")!) {
+            Link(destination: AppLinks.feedback) {
                 HStack(spacing: 5) {
                     Image(systemName: "paperplane.fill").font(.system(size: 9, weight: .semibold))
                     Text("Feedback").font(.system(size: 10.5, weight: .semibold, design: .rounded))
@@ -266,6 +327,46 @@ private struct ExpandedIslandView: View {
     }
 }
 
+/// One weekly cap, as reported. Tinted by Anthropic's own `severity` — not by the user's
+/// palette, which stays in charge of the pill itself.
+private struct LimitChip: View {
+    let limit: UsageLimit
+    let isBinding: Bool
+
+    var body: some View {
+        HStack(spacing: 5) {
+            Text(limit.displayName)
+                .font(.system(size: 10, weight: .medium, design: .rounded))
+                .foregroundStyle(.white.opacity(0.62))
+            Text("\(Int(limit.percent.rounded()))%")
+                .font(.system(size: 10.5, weight: .semibold, design: .rounded))
+                .foregroundStyle(.white.opacity(0.95))
+                .monospacedDigit()
+        }
+        .lineLimit(1)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(Capsule().fill(.white.opacity(isBinding ? 0.14 : 0.06)))
+        .overlay(Capsule().stroke(tint.opacity(isBinding ? 0.85 : 0.28), lineWidth: 1))
+        .help(helpText)
+    }
+
+    private var tint: Color {
+        switch limit.severity {
+        case .critical: .red
+        case .warning: .orange
+        case .normal: .green
+        case .unknown: .gray
+        }
+    }
+
+    private var helpText: String {
+        isBinding
+            ? "\(limit.displayName) — this is the limit currently capping you"
+            : limit.displayName
+    }
+}
+
 private struct MetricRow: View {
     let title: String
     let value: String
@@ -277,6 +378,7 @@ private struct MetricRow: View {
                 .foregroundStyle(.white.opacity(0.56))
                 .frame(width: 112, alignment: .leading)
                 .lineLimit(1)
+                .minimumScaleFactor(0.8)
 
             Text(value)
                 .font(.system(size: 12, weight: .semibold, design: .rounded))
@@ -310,6 +412,9 @@ private struct IslandContextMenu: View {
         }
         Button("Preferences") {
             actions.openPreferences()
+        }
+        Button("Send Feedback…") {
+            NSWorkspace.shared.open(AppLinks.feedback)
         }
         Divider()
         Button("Quit") {

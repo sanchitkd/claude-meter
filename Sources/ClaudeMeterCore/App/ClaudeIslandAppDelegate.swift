@@ -13,6 +13,7 @@ public final class ClaudeIslandAppDelegate: NSObject, NSApplicationDelegate {
     private var webSession: ClaudeWebSession?
     private var loginController: ClaudeLoginWindowController?
     private var updateChecker: UpdateChecker?
+    private var feedbackPrompt: FeedbackPrompt?
 
     public func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -61,6 +62,11 @@ public final class ClaudeIslandAppDelegate: NSObject, NSApplicationDelegate {
         let updateChecker = UpdateChecker(logger: logger)
         self.updateChecker = updateChecker
         updateChecker.checkInBackground()
+
+        // Asks for feedback once, on the first launch three or more days in. Never on day one.
+        let feedbackPrompt = FeedbackPrompt(logger: logger)
+        self.feedbackPrompt = feedbackPrompt
+        feedbackPrompt.considerPrompting()
 
         let loginController = ClaudeLoginWindowController()
         self.loginController = loginController

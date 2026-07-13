@@ -3,30 +3,59 @@ import Foundation
 
 @MainActor
 public final class UpdateChecker {
-    private let repo = "sanchitkd/claude-meter"
     private let logger: AppLogger?
     private let defaults = UserDefaults.standard
     private let lastNotifiedKey = "lastNotifiedUpdateVersion"
+    private let installIDKey = "anonymousInstallID"
 
     public init(logger: AppLogger? = nil) { self.logger = logger }
     public func checkInBackground() { Task { await check() } }
 
+    /// A random UUID, generated once and stored only on this Mac. It is not derived from you,
+    /// your account or your hardware — it exists so the update endpoint can count how many
+    /// installs are still *running* (COUNT DISTINCT) rather than how many times apps launched.
+    /// Disclosed in the README and in the site's privacy list.
+    private var installID: String {
+        if let existing = defaults.string(forKey: installIDKey) { return existing }
+        let fresh = UUID().uuidString.lowercased()
+        defaults.set(fresh, forKey: installIDKey)
+        return fresh
+    }
+
+    private struct PingResponse: Decodable {
+        let latest: String?
+        let url: String?
+    }
+
     private func check() async {
-        guard let current = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String,
-              let url = URL(string: "https://api.github.com/repos/\(repo)/releases/latest") else { return }
+        guard let current = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String else { return }
+
+        var components = URLComponents(string: AppLinks.ping)
+        components?.queryItems = [
+            URLQueryItem(name: "v", value: current),
+            URLQueryItem(name: "id", value: installID),
+        ]
+        guard let url = components?.url else { return }
+
         do {
-            var req = URLRequest(url: url)
-            req.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
-            let (data, _) = try await URLSession.shared.data(for: req)
-            guard let obj = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let tag = obj["tag_name"] as? String else { return }
+            var request = URLRequest(url: url)
+            request.setValue("application/json", forHTTPHeaderField: "Accept")
+            request.timeoutInterval = 10
+            let (data, _) = try await URLSession.shared.data(for: request)
+
+            let body = try JSONDecoder().decode(PingResponse.self, from: data)
+            guard let tag = body.latest, !tag.isEmpty else { return }
             let latest = tag.hasPrefix("v") ? String(tag.dropFirst()) : tag
+
             guard isNewer(latest, than: current),
                   defaults.string(forKey: lastNotifiedKey) != latest else { return }
-            let page = (obj["html_url"] as? String).flatMap(URL.init(string:))
-            present(latest: latest, page: page)
+
+            present(latest: latest, page: body.url.flatMap(URL.init(string:)))
             defaults.set(latest, forKey: lastNotifiedKey)
-        } catch { logger?.info("Update check skipped: \(error.localizedDescription)") }
+        } catch {
+            // Never bother the user because an update check failed.
+            logger?.info("Update check skipped: \(error.localizedDescription)")
+        }
     }
 
     private func isNewer(_ a: String, than b: String) -> Bool {
