@@ -2,12 +2,14 @@
 set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT_DIR"
+VERSION="1.2.0"          # W6.4 — single source of truth. Must match the git tag: git tag v$VERSION
+BUILD="2"
 swift build -c release
 APP_DIR="$ROOT_DIR/.build/release/ClaudeMeter.app"
 CONTENTS_DIR="$APP_DIR/Contents"; MACOS_DIR="$CONTENTS_DIR/MacOS"; RESOURCES_DIR="$CONTENTS_DIR/Resources"; PLIST="$CONTENTS_DIR/Info.plist"
 rm -rf "$APP_DIR"; mkdir -p "$MACOS_DIR" "$RESOURCES_DIR"
 cp "$ROOT_DIR/.build/release/ClaudeMeter" "$MACOS_DIR/ClaudeMeter"
-cat > "$PLIST" <<'PLIST'
+cat > "$PLIST" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -19,8 +21,8 @@ cat > "$PLIST" <<'PLIST'
     <key>CFBundleName</key><string>Claude Meter</string>
     <key>CFBundleIconFile</key><string>AppIcon</string>
     <key>CFBundlePackageType</key><string>APPL</string>
-    <key>CFBundleShortVersionString</key><string>1.2.0</string>
-    <key>CFBundleVersion</key><string>2</string>
+    <key>CFBundleShortVersionString</key><string>$VERSION</string>
+    <key>CFBundleVersion</key><string>$BUILD</string>
     <key>LSMinimumSystemVersion</key><string>14.0</string>
     <key>LSUIElement</key><true/>
     <key>NSHighResolutionCapable</key><true/>
@@ -44,4 +46,5 @@ codesign --force --deep --sign - "$APP_PATH"   # ad-hoc sign the whole bundle
 # Strip once more, immediately before verifying. (Real fix: move the repos off iCloud — W6.4.)
 xattr -cr "$APP_PATH"
 codesign --verify --strict --verbose=2 "$APP_PATH"   # fail loudly rather than ship a broken zip
-echo "Built $APP_DIR"
+echo "Built $APP_DIR (v$VERSION build $BUILD)"
+echo "Tag must match:  git tag v$VERSION && git push origin v$VERSION"
