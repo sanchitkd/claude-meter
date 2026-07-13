@@ -18,17 +18,17 @@ A small pill sits in your menu bar (parked beside the notch). It shows how much 
 - **Notch-aware placement** — pick built-in display, the active screen, the screen under your mouse, or a specific monitor.
 - **Smart refresh** — configurable background interval (60s–30min) plus hover-to-refresh.
 - **Appearance** — System / Dark / Light (the pill stays dark by design); launch at login; optional menu-bar icon.
-- **Model-aware weekly limit** — when a per-model cap (e.g. Fable) is closer to the wall than your all-models cap, the pill shows *that* number, marked `W·F`, because it's the one that will actually stop you.
+- **Per-model weekly caps** — Anthropic caps some models (Fable, Opus…) separately from your all-models weekly limit. The pill shows the all-models number; hover it and every cap is listed, worst first, so you can see the one that's about to stop you.
 - **Almost entirely local** — no account, no usage analytics. One outbound call besides claude.ai: an update check that sends the app version and a random anonymous install ID.
 
 ## How it works
 
 Claude has no public usage API. Claude Meter reads the **same authenticated endpoint the claude.ai website uses** — `GET /api/organizations/{org}/usage` — from inside a hidden WebKit view that carries your normal claude.ai login (a `sessionKey` cookie stored only in the app's local container). It decodes the session/weekly utilization and reset timestamps and renders them.
 
-Nothing leaves your Mac except the request to `claude.ai` itself.
+Two requests leave your Mac, ever: the usage call to `claude.ai`, and an update check to `claude.sanchitkd.com/ping` carrying the app version and a random anonymous install ID. Nothing else.
 
 > WARNING: Because it relies on an **undocumented endpoint** plus your web session, it can break if Anthropic changes things. This is a personal-use convenience tool, not an official Anthropic product, and isn't affiliated with or endorsed by Anthropic.
-> The app checks GitHub on launch and prompts you when a fix ships.
+> The app checks for a new version on launch and prompts you when a fix ships.
 
 ## Privacy & security
 
@@ -130,7 +130,7 @@ Then just run `cm` to rebuild and relaunch.
 
 ## Roadmap
 
-- Optional update notifications (version check / Sparkle).
+- Auto-update (Sparkle) — today the app only *tells* you an update exists.
 - Live plan name.
 - Signed + notarized builds (no Gatekeeper prompt).
 
@@ -138,7 +138,7 @@ Then just run `cm` to rebuild and relaunch.
 
 Built by **Sanchit Dikshit** — [sanchitkd.com](https://www.sanchitkd.com) - [Dev.to](https://dev.to/sanchitkd) - GitHub [@sanchitkd](https://github.com/sanchitkd).
 
-Feedback or hi: **[sanchitkd.com/#contact](https://www.sanchitkd.com/#contact)**.
+Feedback or hi: **[claude.sanchitkd.com/#send-feedback](claude.sanchitkd.com/#send-feedback)**.
 
 If you use or fork Claude Meter, a star on the repo and a link back are appreciated.
 

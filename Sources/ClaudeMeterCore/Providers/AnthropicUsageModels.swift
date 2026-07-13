@@ -91,15 +91,16 @@ public enum AnthropicUsageMapper {
         let sessionRow = rows.first { $0.group == .session }
         let weeklyRows = rows.filter { $0.group == .weekly }
 
-        // The whole point of the app: report the limit that will actually stop you.
-        // With all-models at 53% and Fable at 100%, the honest weekly number is 100%.
-        let binding = weeklyRows.max { $0.percent < $1.percent }
+        // The pill's W is the ALL-MODELS weekly cap — the number people expect to see there.
+        // Per-model caps (Fable, Opus…) are surfaced as chips in the hover card instead.
+        let allModels = weeklyRows.first { $0.modelName == nil }
+            ?? weeklyRows.first { $0.kind == "weekly_all" }
 
         let sessionPct = sessionRow?.percent ?? dto.fiveHour?.utilization
         let sessionReset = sessionRow?.resetDate ?? dto.fiveHour?.resetDate
 
-        let weeklyPct = binding?.percent ?? dto.sevenDay?.utilization
-        let weeklyReset = binding?.resetDate ?? dto.sevenDay?.resetDate
+        let weeklyPct = allModels?.percent ?? dto.sevenDay?.utilization
+        let weeklyReset = allModels?.resetDate ?? dto.sevenDay?.resetDate
 
         let session = UsageWindow(
             label: "Current Session",
@@ -112,7 +113,7 @@ public enum AnthropicUsageMapper {
             usagePercentage: weeklyPct,
             resetDate: weeklyReset,
             resetDescription: dto.sevenDay?.resetsAtRaw,
-            limitDescription: binding?.displayName
+            limitDescription: allModels?.displayName
         )
 
         let haveAny = (sessionPct != nil) || (weeklyPct != nil)
@@ -128,7 +129,7 @@ public enum AnthropicUsageMapper {
             session: session,
             weekly: weekly,
             limits: rows,
-            weeklyDriver: binding?.modelName,   // nil when the all-models cap is the binding one
+            weeklyDriver: nil,   // pill shows all-models; per-model caps live in the card's chips
             planName: planName,
             status: status,
             sourceDescription: sourceDescription
