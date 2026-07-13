@@ -31,6 +31,13 @@ chmod +x "$MACOS_DIR/ClaudeMeter"
 APP_PATH=".build/release/ClaudeMeter.app"
 mkdir -p "$APP_PATH/Contents/Resources"
 cp assets/AppIcon.icns "$APP_PATH/Contents/Resources/AppIcon.icns"
+# codesign refuses to sign a bundle carrying "resource fork, Finder information, or similar
+# detritus" — strip all of it first, or the build silently ships an UNSIGNED app that opens
+# as "damaged" on every other Mac.
+find "$APP_PATH" -name '.DS_Store' -delete 2>/dev/null || true
 xattr -cr "$APP_PATH"
-codesign --force --sign - "$APP_PATH"      # ad-hoc sign whole bundle ($APP_PATH = your .build/release/ClaudeMeter.app)
+dot_clean -m "$APP_PATH" 2>/dev/null || true
+
+codesign --force --deep --sign - "$APP_PATH"   # ad-hoc sign the whole bundle
+codesign --verify --strict --verbose=2 "$APP_PATH"   # fail loudly rather than ship a broken zip
 echo "Built $APP_DIR"
