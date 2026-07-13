@@ -248,7 +248,7 @@ private struct ExpandedIslandView: View {
                         ForEach(weeklyRows) { limit in
                             LimitChip(
                                 limit: limit,
-                                isBinding: limit.displayName == snapshot.weekly?.limitDescription
+                                isBinding: limit.id == weeklyRows.first?.id   // sorted worst-first
                             )
                         }
                     }
