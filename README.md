@@ -18,7 +18,8 @@ A small pill sits in your menu bar (parked beside the notch). It shows how much 
 - **Notch-aware placement** — pick built-in display, the active screen, the screen under your mouse, or a specific monitor.
 - **Smart refresh** — configurable background interval (60s–30min) plus hover-to-refresh.
 - **Appearance** — System / Dark / Light (the pill stays dark by design); launch at login; optional menu-bar icon.
-- **100% local** — no servers, no telemetry, no account with anyone but Claude.
+- **Model-aware weekly limit** — when a per-model cap (e.g. Fable) is closer to the wall than your all-models cap, the pill shows *that* number, marked `W·F`, because it's the one that will actually stop you.
+- **Almost entirely local** — no account, no usage analytics. One outbound call besides claude.ai: an update check that sends the app version and a random anonymous install ID.
 
 ## How it works
 
@@ -31,9 +32,9 @@ Nothing leaves your Mac except the request to `claude.ai` itself.
 
 ## Privacy & security
 
-- No accounts, no servers, no analytics, no data collection.
+- No accounts, no usage analytics, no data collection.
 - Your Claude session cookie stays in the app's local WebKit store on your Mac.
-- The app talks only to `claude.ai`.
+- The app talks to `claude.ai` and to `claude.sanchitkd.com/ping` — the update check. The ping carries exactly two things: the app version, and a random UUID generated on first launch and stored in `UserDefaults`. It is not derived from you, your account or your hardware; it exists so I can count how many installs are still running rather than how many times apps launch. It's ~40 lines in `UpdateChecker.swift` — read it.
 - Fully open source — read every line before you trust it.
 
 ## Requirements
