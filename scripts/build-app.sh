@@ -41,10 +41,6 @@ xattr -cr "$APP_PATH"
 dot_clean -m "$APP_PATH" 2>/dev/null || true
 
 codesign --force --deep --sign - "$APP_PATH"   # ad-hoc sign the whole bundle
-# The repo sits under ~/Desktop → iCloud Drive's file provider re-attaches com.apple.FinderInfo
-# within seconds of signing, which makes --strict verification fail on an otherwise valid bundle.
-# Strip once more, immediately before verifying. (Real fix: move the repos off iCloud — W6.4.)
-xattr -cr "$APP_PATH"
 codesign --verify --strict --verbose=2 "$APP_PATH"   # fail loudly rather than ship a broken zip
 echo "Built $APP_DIR (v$VERSION build $BUILD)"
 echo "Tag must match:  git tag v$VERSION && git push origin v$VERSION"
