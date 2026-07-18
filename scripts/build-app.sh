@@ -41,6 +41,29 @@ xattr -cr "$APP_PATH"
 dot_clean -m "$APP_PATH" 2>/dev/null || true
 
 codesign --force --deep --sign - "$APP_PATH"   # ad-hoc sign the whole bundle
-codesign --verify --strict --verbose=2 "$APP_PATH"   # fail loudly rather than ship a broken zip
+codesign --verify --strict --verbose=2 "$APP_PATH"   # fail loudly rather than ship a broken archive
+
+# ── W6.4: package the release archive HERE, not by hand ──────────────────────────
+# `zip -r` and Finder's "Compress" both drop the _CodeSignature/ dir and resource forks
+# from a signed .app — that is what shipped the "ClaudeMeter is damaged" build. `ditto`
+# is the only Apple-blessed way to archive a bundle without corrupting the signature.
+# --keepParent puts ClaudeMeter.app/ at the archive root (so it unzips to the app, not its
+# guts); --sequesterRsrc keeps xattrs/forks in the archive's __MACOSX sidecar intact.
+ZIP_PATH="$ROOT_DIR/.build/release/ClaudeMeter.app.zip"
+rm -f "$ZIP_PATH"
+ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" "$ZIP_PATH"
+
+# The archive is what users actually download — re-verify the SIGNATURE SURVIVED packaging.
+# Unzip to a scratch dir and codesign the extracted copy; a stripped archive fails here
+# instead of in a user's Gatekeeper dialog.
+VERIFY_DIR="$(mktemp -d)"
+trap 'rm -rf "$VERIFY_DIR"' EXIT
+ditto -x -k "$ZIP_PATH" "$VERIFY_DIR"
+if ! codesign --verify --strict --verbose=2 "$VERIFY_DIR/ClaudeMeter.app"; then
+  echo "FATAL: signature did NOT survive packaging — the archive is unsigned. NOT shipping." >&2
+  exit 1
+fi
+echo "Packaged $ZIP_PATH ($(du -h "$ZIP_PATH" | cut -f1)) — signature verified post-archive."
+
 echo "Built $APP_DIR (v$VERSION build $BUILD)"
 echo "Tag must match:  git tag v$VERSION && git push origin v$VERSION"
