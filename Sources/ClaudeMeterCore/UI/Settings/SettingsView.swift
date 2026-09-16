@@ -51,6 +51,21 @@ public struct SettingsView: View {
                     }
                 }
             }
+            // The per-model caps have been in the hover card since v1.2.0, so this is a
+            // glanceability choice, not new information. It is a picker rather than a default
+            // change because "All models" is the number people have been reading for months.
+            Section("Weekly Number") {
+                Picker("W shows", selection: $settings.weeklyPillMode) {
+                    ForEach(PillWeeklyMode.allCases) { mode in
+                        Text(mode.displayName).tag(mode)
+                    }
+                }
+                .pickerStyle(.segmented)
+                Text(settings.weeklyPillMode.explanation)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             Section("Usage Colors") {
                 Grid(alignment: .leading, horizontalSpacing: 18, verticalSpacing: 10) {
                     ColorRow(title: "0-20%", color: colorBinding(\.green))

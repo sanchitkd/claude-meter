@@ -91,8 +91,9 @@ public enum AnthropicUsageMapper {
         let sessionRow = rows.first { $0.group == .session }
         let weeklyRows = rows.filter { $0.group == .weekly }
 
-        // The pill's W is the ALL-MODELS weekly cap — the number people expect to see there.
-        // Per-model caps (Fable, Opus…) are surfaced as chips in the hover card instead.
+        // The pill's W defaults to the ALL-MODELS weekly cap — the number people expect to see
+        // there. Per-model caps are surfaced as chips in the hover card, and since 2026-09-15 a
+        // user can opt the pill itself onto the worst cap via PillWeeklyMode.
         let allModels = weeklyRows.first { $0.modelName == nil }
             ?? weeklyRows.first { $0.kind == "weekly_all" }
 
@@ -101,6 +102,22 @@ public enum AnthropicUsageMapper {
 
         let weeklyPct = allModels?.percent ?? dto.sevenDay?.utilization
         let weeklyReset = allModels?.resetDate ?? dto.sevenDay?.resetDate
+
+        // FIXED 2026-09-15: this was hardcoded `nil`, which left `weeklyDriver`, `weeklyMarker`,
+        // the pill's "W·F" marker and the card's "Weekly · Fable" title ALL unreachable from
+        // v1.2.0 onward — four rendered paths the handover described as unbuilt while they sat
+        // in the tree. A no-op parked "pending X" must record how to tell whether X arrived
+        // (§10.2); this one recorded nothing and cost a full investigation to rediscover.
+        //
+        // It is set only when a model-scoped cap is STRICTLY worse than the all-models cap.
+        // Equal percentages keep it nil, because "Fable" and "All models" at the same number is
+        // the all-models cap by the more useful reading.
+        let worstWeekly = weeklyRows.max(by: { $0.percent < $1.percent })
+        let weeklyDriver: String? = {
+            guard let worstWeekly, let model = worstWeekly.modelName, !model.isEmpty else { return nil }
+            guard worstWeekly.percent > (allModels?.percent ?? 0) else { return nil }
+            return model
+        }()
 
         let session = UsageWindow(
             label: "Current Session",
@@ -129,7 +146,7 @@ public enum AnthropicUsageMapper {
             session: session,
             weekly: weekly,
             limits: rows,
-            weeklyDriver: nil,   // pill shows all-models; per-model caps live in the card's chips
+            weeklyDriver: weeklyDriver,
             planName: planName,
             status: status,
             sourceDescription: sourceDescription
