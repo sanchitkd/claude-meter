@@ -21,6 +21,7 @@ public struct IslandView: View {
 
     public var body: some View {
         let expanded = isHovered
+        let reading = weeklyReading
         let maxUsage = currentMaxUsage
         let pulseActive = maxUsage >= 85
         let strongPulse = maxUsage >= 95
@@ -31,6 +32,7 @@ public struct IslandView: View {
             if expanded {
                 ExpandedIslandView(
                     snapshot: stateManager.snapshot,
+                    weekly: reading,
                     now: stateManager.now,
                     isRefreshing: stateManager.isRefreshing,
                     sessionCountdown: stateManager.sessionCountdownText(),
@@ -42,6 +44,7 @@ public struct IslandView: View {
             } else {
                 CollapsedIslandView(
                     snapshot: stateManager.snapshot,
+                    weekly: reading,
                     palette: settings.colorPalette,
                     isRefreshing: stateManager.isRefreshing
                 )
@@ -115,14 +118,25 @@ public struct IslandView: View {
             value: stateManager.snapshot.session?.usagePercentage
         )
         .animation(
+            // The RESOLVED weekly figure, not `snapshot.weekly`. In .closest mode the displayed
+            // number comes from `limits[]`, so animating on the all-models value would leave the
+            // pill snapping between per-model percentages with no transition.
             settings.animationsEnabled ? .easeInOut(duration: 0.45) : nil,
-            value: stateManager.snapshot.weekly?.usagePercentage
+            value: weeklyReading.percent
         )
     }
 
+    private var weeklyReading: WeeklyReading {
+        stateManager.snapshot.weeklyReading(mode: settings.weeklyPillMode)
+    }
+
+    /// Drives the colour, the pulse and the shake. It MUST read the same weekly figure the pill
+    /// prints: if it used `snapshot.weekly` while .closest mode showed a model cap at 100%, the
+    /// number would say 100% and the pill would stay green — the colour contradicting the digit
+    /// it sits behind.
     private var currentMaxUsage: Double {
         let session = stateManager.snapshot.session?.usagePercentage ?? 0
-        let weekly = stateManager.snapshot.weekly?.usagePercentage ?? 0
+        let weekly = weeklyReading.percent ?? 0
         return max(session, weekly)
     }
 
@@ -137,6 +151,7 @@ public struct IslandView: View {
 
 private struct CollapsedIslandView: View {
     let snapshot: UsageSnapshot
+    let weekly: WeeklyReading
     let palette: UsageColorPalette
     let isRefreshing: Bool
 
@@ -152,8 +167,8 @@ private struct CollapsedIslandView: View {
 
             half(
                 label: "W",
-                marker: snapshot.weeklyMarker,
-                value: snapshot.weekly?.usagePercentage,
+                marker: weekly.marker,
+                value: weekly.percent,
                 leading: false
             )
             .accessibilityLabel(weeklyAccessibilityLabel)
@@ -168,14 +183,14 @@ private struct CollapsedIslandView: View {
     }
 
     private var weeklyAccessibilityLabel: String {
-        if let driver = snapshot.weeklyDriver {
+        if let driver = weekly.driver {
             return "Weekly usage, currently capped by \(driver)"
         }
         return "Weekly usage, all models"
     }
 
-    /// `marker` appears only when a model cap — not the all-models cap — is the one that
-    /// will stop you. "W·F 100%" says *why* the pill is red without opening the card.
+    /// `marker` appears only when a model cap — not the all-models cap — is the one being
+    /// shown. "W·F 100%" says *why* the pill is red without opening the card.
     private func half(label: String, marker: String?, value: Double?, leading: Bool) -> some View {
         let fill = UsageColorResolver.color(for: value, palette: palette)
         let txt = UsageColorResolver.textColor(for: value, palette: palette)
@@ -206,6 +221,7 @@ private struct CollapsedIslandView: View {
 
 private struct ExpandedIslandView: View {
     let snapshot: UsageSnapshot
+    let weekly: WeeklyReading
     let now: Date
     let isRefreshing: Bool
     let sessionCountdown: String
@@ -233,14 +249,18 @@ private struct ExpandedIslandView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     MetricRow(
                         title: weeklyTitle,
-                        value: UsageFormatters.percentageString(snapshot.weekly?.usagePercentage)
+                        value: UsageFormatters.percentageString(weekly.percent)
                     )
                     MetricRow(title: "Weekly Reset", value: weeklyCountdown)
                 }
             }
 
             HStack(alignment: .center, spacing: 12) {
-                MetricRow(title: "Last Refresh", value: UsageFormatters.timestampString(snapshot.capturedAt))
+                // Age-aware, not a bare clock time: `19:21` from yesterday reads as today.
+                MetricRow(
+                    title: "Last Refresh",
+                    value: UsageFormatters.lastRefreshString(snapshot.capturedAt, now: now)
+                )
 
                 if !weeklyRows.isEmpty {
                     Spacer(minLength: 0)
@@ -263,9 +283,9 @@ private struct ExpandedIslandView: View {
         .foregroundStyle(.white)
     }
 
-    /// "Weekly Used" normally; "Weekly · Fable" when a model cap is the binding one.
+    /// "Weekly Used" normally; "Weekly · Fable" when a model cap is the one being shown.
     private var weeklyTitle: String {
-        if let driver = snapshot.weeklyDriver {
+        if let driver = weekly.driver {
             return "Weekly · \(driver)"
         }
         return "Weekly Used"

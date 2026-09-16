@@ -46,6 +46,11 @@ public final class SettingsManager: ObservableObject {
     @Published public var pillDisplayID: Int {
         didSet { defaults.set(pillDisplayID, forKey: Keys.pillDisplayID) }
     }
+    /// What the pill's W figure reads. Defaults to `.allModels` — the v1.2.0 behaviour — so an
+    /// upgrade never silently changes the number somebody has been reading for two months.
+    @Published public var weeklyPillMode: PillWeeklyMode {
+        didSet { defaults.set(weeklyPillMode.rawValue, forKey: Keys.weeklyPillMode) }
+    }
     private let defaults: UserDefaults
     private let logger: AppLogger?
 
@@ -72,6 +77,8 @@ public final class SettingsManager: ObservableObject {
         let savedMode = defaults.string(forKey: Keys.pillScreenMode)
         self.pillScreenMode = savedMode.flatMap(PillScreenMode.init(rawValue:)) ?? .builtIn
         self.pillDisplayID = defaults.integer(forKey: Keys.pillDisplayID)
+        let savedWeekly = defaults.string(forKey: Keys.weeklyPillMode)
+        self.weeklyPillMode = savedWeekly.flatMap(PillWeeklyMode.init(rawValue:)) ?? .allModels
     }
 
     public func setLaunchAtLogin(_ enabled: Bool) {
@@ -110,5 +117,6 @@ public final class SettingsManager: ObservableObject {
         static let colorPalette = "colorPalette"
         static let pillScreenMode = "pillScreenMode"
         static let pillDisplayID = "pillDisplayID"
+        static let weeklyPillMode = "weeklyPillMode"
     }
 }

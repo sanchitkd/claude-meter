@@ -81,9 +81,18 @@ public final class UsageStateManager: ObservableObject {
         )
     }
 
+    /// Resolved through the same `weeklyReading` the pill and the card use. In .closest mode the
+    /// countdown must belong to the cap being SHOWN — a per-model cap and the all-models cap do
+    /// not reset together, and a number paired with someone else's reset time is worse than no
+    /// number at all.
+    ///
+    /// `settings` is read on each call rather than cached: the view holds `SettingsManager` as an
+    /// `@ObservedObject`, so flipping the preference re-renders `IslandView`, which re-invokes
+    /// this. No observation is needed here.
     public func weeklyCountdownText() -> String {
-        UsageFormatters.countdownString(
-            until: snapshot.weekly?.resetDate,
+        let reading = snapshot.weeklyReading(mode: settings.weeklyPillMode)
+        return UsageFormatters.countdownString(
+            until: reading.resetDate,
             fallback: snapshot.weekly?.resetDescription,
             now: now
         )
