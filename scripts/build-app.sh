@@ -2,7 +2,7 @@
 set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT_DIR"
-VERSION="1.2.0"          # W6.4 — single source of truth. Must match the git tag: git tag v$VERSION
+VERSION="1.3.0"          # W6.4 — single source of truth. Must match the git tag: git tag v$VERSION
 BUILD="2"
 swift build -c release
 APP_DIR="$ROOT_DIR/.build/release/ClaudeMeter.app"
